@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/fzft/my-actor/actor"
+	"github.com/fzft/my-actor/internel"
 )
 
 // Define the Actor interface
@@ -18,7 +18,7 @@ type MyActor struct {
 func (a *MyActor) Receive(msg any) {
 	// Process the message
 	switch msg := msg.(type) {
-	case actor.Message:
+	case internel.Message:
 		fmt.Printf("Received message: %s\n", msg.content)
 	}
 }

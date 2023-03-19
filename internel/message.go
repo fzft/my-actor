@@ -1,4 +1,4 @@
-package actor
+package internel
 
 // StartMessage Define a start message struct
 type StartMessage struct{}
