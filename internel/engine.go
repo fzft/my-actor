@@ -6,11 +6,21 @@ import (
 	"go.uber.org/zap"
 )
 
-// DAG  directed acyclic graph (DAG) where actors are the nodes and messages are the edges
+// DAG  directed acyclic graph (DAG) where actors are the nodes
+// DAG is allowed to have only one root actor
+// every actor can have multiple parents and children
+// actor is driven by messages
+// between actors, there are edges that connect them
+// the edges are unidirectional
+// edges are used to send messages between actors
+// use ring buffer to store messages between actors
+// if received message is not handled, will discard it
+
 // Step 1: Create a DAG
 // Step 2: Add actors to the DAG
-// Step 3: Add messages to the Mailbox
-// Step 4: Execute the actors in the DAG
+// Step 3: Add Edge between actors
+// Step 3: Ready the actors in the DAG
+// Step 4: Send messages to the DAG
 
 // Engine is the actor engine
 type Engine[T Actor] struct {
@@ -27,6 +37,9 @@ type Engine[T Actor] struct {
 
 	// root is the root actor
 	root T
+
+	// sinkPool is store the result of the leaf actor
+	sinkPool *SinkPool
 }
 
 func NewEngine() *Engine[Actor] {
@@ -34,9 +47,10 @@ func NewEngine() *Engine[Actor] {
 	loggerConfig.EncoderConfig.TimeKey = ""
 	logger, _ := loggerConfig.Build()
 	return &Engine[Actor]{
-		logger:  logger.Sugar(),
-		DAG:     pkg.NewDAG[Actor](),
-		mailbox: NewDefaultMailbox[any](),
+		logger:   logger.Sugar(),
+		DAG:      pkg.NewDAG[Actor](),
+		mailbox:  NewDefaultMailbox[any](),
+		sinkPool: NewSinkPool(),
 	}
 }
 

@@ -1,7 +1,5 @@
 package internel
 
-import "github.com/fzft/my-actor/pkg"
-
 // Suber is the interface that wraps the basic Subscribe methods.
 // subscribe to a or more parent actor
 type Suber interface {
@@ -14,21 +12,18 @@ type Puber interface {
 	Pub() <-chan any
 }
 
-type Storer[K comparable, V any] interface {
-	Put(key K, value V)
-	Get(key K) (V, bool)
-}
-
-type Context[K comparable, V any] struct {
+// Context is the interface that wraps the basic Context methods.
+// every actor has a context
+// the context is used to communicate with the actor's parent and children
+type Context struct {
 	sub   Suber
 	pub   Puber
-	store Storer[K, V]
+	store Storer
 
 	pid Pid
 }
 
-func NewContext[K comparable, V any](pid Pid) *Context[K, V] {
-	return &Context[K, V]{pid: pid, store: pkg.NewKeyValueStore[K, V]()}
+// NewContext returns a new Context
+func NewContext(pid Pid) *Context {
+	return &Context{pid: pid, store: NewMemoryStore()}
 }
-
-// metrics is the metrics of the actor
