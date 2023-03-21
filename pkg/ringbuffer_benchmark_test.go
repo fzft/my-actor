@@ -3,7 +3,7 @@ package pkg
 import "testing"
 
 func BenchmarkLockFreeRingBuffer(b *testing.B) {
-	rb := NewLockFreeRingBuffer[int](1024)
+	rb := NewLockFreeRingBuffer(1024)
 	b.RunParallel(func(pb *testing.PB) {
 		i := 0
 		for pb.Next() {
@@ -18,7 +18,7 @@ func BenchmarkLockFreeRingBuffer(b *testing.B) {
 }
 
 func BenchmarkLockBasedRingBuffer(b *testing.B) {
-	rb := NewRingBuffer[int](1024)
+	rb := NewRingBuffer(1024)
 	b.RunParallel(func(pb *testing.PB) {
 		i := 0
 		for pb.Next() {

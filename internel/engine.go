@@ -30,39 +30,53 @@ type Engine[T Actor] struct {
 	*pkg.DAG[T]
 
 	// mailbox is the mailbox of the engine
-	mailbox Mailbox[any]
+	mailbox Mailbox
 
 	// nodeMaps is the map of actors
 	nodeMaps map[string]*pkg.Node[T]
 
+	// pidMaps is the map of pid
+	pidMaps map[string]*Pid
+
 	// root is the root actor
-	root T
+	root *Pid
 
 	// sinkPool is store the result of the leaf actor
 	sinkPool *SinkPool
+
+	isReady bool
 }
 
 func NewEngine() *Engine[Actor] {
 	loggerConfig := zap.NewDevelopmentConfig()
 	loggerConfig.EncoderConfig.TimeKey = ""
 	logger, _ := loggerConfig.Build()
+	sugarLogger := logger.Sugar()
 	return &Engine[Actor]{
-		logger:   logger.Sugar(),
+		logger:   sugarLogger,
 		DAG:      pkg.NewDAG[Actor](),
-		mailbox:  NewDefaultMailbox[any](),
+		mailbox:  NewDefaultMailbox(sugarLogger),
 		sinkPool: NewSinkPool(),
+		nodeMaps: make(map[string]*pkg.Node[Actor]),
+		pidMaps:  make(map[string]*Pid),
 	}
 }
 
 // Spawn spawns a new actor
-func (e *Engine[Actor]) Spawn(actor Actor) Pid {
-	pid := NewPid(actor.String())
+func (e *Engine[Actor]) Spawn(actor Actor) (*Pid, error) {
+	// check if the actor is already spawned
+	if _, ok := e.pidMaps[actor.String()]; ok {
+		return nil, fmt.Errorf("actor already spawned")
+	}
+
+	pid := NewPid(e.logger, actor)
 	node := e.AddNode(actor)
 	e.nodeMaps[pid.uuid] = node
-	return pid
+	e.pidMaps[actor.String()] = pid
+	return pid, nil
 }
 
-func (e *Engine[Actor]) AddEdge(from, to Pid) error {
+func (e *Engine[Actor]) AddEdge(from, to *Pid) error {
 	fromNode, ok := e.nodeMaps[from.uuid]
 	if !ok {
 		return fmt.Errorf("from actor not found")
@@ -79,7 +93,6 @@ func (e *Engine[Actor]) AddEdge(from, to Pid) error {
 		return err
 	}
 
-	// TODO: add sub and pub to the upstream and downstream actors
 	return nil
 }
 
@@ -96,38 +109,39 @@ func (e *Engine[Actor]) Ready() error {
 		return fmt.Errorf("only one root actor is allowed")
 	}
 
-	e.root = roots[0].Value
-	// TODO: active the actors
+	rootActor := roots[0].Value
+	e.root = e.pidMaps[rootActor.String()]
 
+	// setup mailbox to root actor
+	e.root.context.setMailbox(e.mailbox)
+
+	// setup every non-leaf actor conn to its child actor
+	for _, node := range e.getNonLeafActors() {
+		nodePid := e.pidMaps[node.Value.String()]
+		childActorNodes := e.getChildActors(node)
+		for _, childNode := range childActorNodes {
+			childPid := e.pidMaps[childNode.Value.String()]
+			nodePid.context.addChild(childPid)
+		}
+	}
+
+	for _, pid := range e.pidMaps {
+		go pid.run()
+	}
+
+	// run the tick message
+	go e.sinkTickMsg()
+
+	e.isReady = true
 	return nil
 }
 
-//
-
-// Execute executes the actors in the engine
-func (e *Engine[Actor]) Execute() {
-	visited := make(map[*pkg.Node[Actor]]bool)
-	var visit func(node *pkg.Node[Actor])
-	visit = func(node *pkg.Node[Actor]) {
-		if visited[node] {
-			return
-		}
-		visited[node] = true
-
-		// TODO: execute the actor
-		fmt.Println("Executing actor:", node.Value)
-
-		neighbors := e.Neighbors(node)
-		for _, neighbor := range neighbors {
-			visit(neighbor)
-		}
+// Send sends a message to the DAG
+func (e *Engine[Actor]) Send(msg any) error {
+	if !e.isReady {
+		return fmt.Errorf("engine is not ready")
 	}
-
-	for _, node := range e.Nodes {
-		if !visited[node] {
-			visit(node)
-		}
-	}
+	return e.mailbox.Source(msg)
 }
 
 // getRootActor returns the root actors of the DAG, could be multiple
@@ -144,4 +158,30 @@ func (e *Engine[Actor]) getRootActors() ([]*pkg.Node[Actor], error) {
 		}
 	}
 	return roots, nil
+}
+
+// getNonLeafActors returns the non-leaf actors of the DAG, could be multiple
+func (e *Engine[Actor]) getNonLeafActors() []*pkg.Node[Actor] {
+	return e.DAG.GetNonLeafNodes()
+}
+
+// getChildActors returns the child actors of the DAG, could be multiple
+func (e *Engine[Actor]) getChildActors(node *pkg.Node[Actor]) []*pkg.Node[Actor] {
+	return e.DAG.Neighbors(node)
+}
+
+// sinkTickMsg is the message that is sent to the sink actor
+func (e *Engine[Actor]) sinkTickMsg() {
+	for _, pid := range e.pidMaps {
+		go func(pid *Pid) {
+			for {
+				select {
+				case in := <-pid.TickInMsgCh:
+					e.sinkPool.PutInMsg(in.uid, in)
+				case out := <-pid.TickOutMsgCh:
+					e.sinkPool.PutOutMsg(out.uid, out)
+				}
+			}
+		}(pid)
+	}
 }

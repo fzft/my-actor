@@ -4,8 +4,8 @@ import (
 	"sync"
 )
 
-type RingBuffer[T any] struct {
-	buffer   []T
+type RingBuffer struct {
+	buffer   []any
 	capacity int
 	count    int
 	head     int
@@ -13,9 +13,9 @@ type RingBuffer[T any] struct {
 	mu       sync.RWMutex
 }
 
-func NewRingBuffer[T any](capacity int) *RingBuffer[T] {
-	return &RingBuffer[T]{
-		buffer:   make([]T, capacity),
+func NewRingBuffer(capacity int) *RingBuffer {
+	return &RingBuffer{
+		buffer:   make([]any, capacity),
 		capacity: capacity,
 		count:    0,
 		head:     0,
@@ -23,29 +23,29 @@ func NewRingBuffer[T any](capacity int) *RingBuffer[T] {
 	}
 }
 
-func (rb *RingBuffer[T]) isEmpty() bool {
+func (rb *RingBuffer) isEmpty() bool {
 	return rb.count == 0
 }
 
-func (rb *RingBuffer[T]) IsEmpty() bool {
+func (rb *RingBuffer) IsEmpty() bool {
 	rb.mu.RLock()
 	defer rb.mu.RUnlock()
 
 	return rb.isEmpty()
 }
 
-func (rb *RingBuffer[T]) isFull() bool {
+func (rb *RingBuffer) isFull() bool {
 	return rb.count == rb.capacity
 }
 
-func (rb *RingBuffer[T]) IsFull() bool {
+func (rb *RingBuffer) IsFull() bool {
 	rb.mu.RLock()
 	defer rb.mu.RUnlock()
 
 	return rb.isFull()
 }
 
-func (rb *RingBuffer[T]) Enqueue(value T) bool {
+func (rb *RingBuffer) Enqueue(value any) bool {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
 
@@ -60,12 +60,12 @@ func (rb *RingBuffer[T]) Enqueue(value T) bool {
 	return true
 }
 
-func (rb *RingBuffer[T]) Dequeue() (T, bool) {
+func (rb *RingBuffer) Dequeue() (any, bool) {
 	rb.mu.Lock()
 	defer rb.mu.Unlock()
 
 	if rb.isEmpty() {
-		var empty T
+		var empty any
 		return empty, false
 	}
 
@@ -76,12 +76,12 @@ func (rb *RingBuffer[T]) Dequeue() (T, bool) {
 	return value, true
 }
 
-func (rb *RingBuffer[T]) Peek() (T, bool) {
+func (rb *RingBuffer) Peek() (any, bool) {
 	rb.mu.RLock()
 	defer rb.mu.RUnlock()
 
 	if rb.isEmpty() {
-		var empty T
+		var empty any
 		return empty, false
 	}
 

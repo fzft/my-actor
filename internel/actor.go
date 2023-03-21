@@ -16,27 +16,57 @@ type Actor interface {
 	// String ActorId returns the actor's id
 	String() string
 
+	// Receive is the method that defines the actor's behavior when it receives a message.
+	Receive(ctx *Context, msg any) (any, error)
+}
+
+// ErrHandlerActor is the interface that wraps the basic ErrHandlerActor methods.
+type ErrHandlerActor interface {
+	Actor
+
+	// ErrHandler is the method that defines the actor's behavior when it receives a error.
+	ErrHandler(ctx *Context, err error)
+}
+
+type PreStartHookActor interface {
+	Actor
 	// PreStart before the actor starts processing messages
 	PreStart()
+}
 
-	// Receive is the method that defines the actor's behavior when it receives a message.
-	Receive(ctx Context, msg any) error
+type PostStopHookActor interface {
+	Actor
 
 	// PostStop after the actor stops processing messages
 	PostStop()
+}
 
-	// Children returns the actor's children
-	Children() []Actor
+type PreHandleMsgHookActor interface {
+	Actor
+
+	// PreHandleMsg before the actor handles a message
+	PreHandleMsg(ctx *Context, inMsg any)
+}
+
+type PostHandleMsgHookActor interface {
+	Actor
+
+	// PostHandleMsg after the actor handles a message
+	PostHandleMsg(ctx *Context, outMsg any)
 }
 
 type DefaultActor struct {
 }
 
-func (d *DefaultActor) String() string {
-	//TODO implement me
-	panic("implement me")
+func NewDefaultActor(name string) *DefaultActor {
+	return &DefaultActor{}
 }
 
+func (d *DefaultActor) String() string {
+	return "DefaultActor"
+}
+
+// PreStart is Hook that is called before the actor starts processing messages.
 func (d *DefaultActor) PreStart() {
 	//TODO implement me
 	panic("implement me")
@@ -47,16 +77,8 @@ func (d *DefaultActor) Receive(ctx Context, msg any) error {
 	panic("implement me")
 }
 
+// PostStop is Hook that is called after the actor stops processing messages.
 func (d *DefaultActor) PostStop() {
 	//TODO implement me
 	panic("implement me")
-}
-
-func (d *DefaultActor) Children() []Actor {
-	//TODO implement me
-	panic("implement me")
-}
-
-func NewDefaultActor() *DefaultActor {
-	return &DefaultActor{}
 }

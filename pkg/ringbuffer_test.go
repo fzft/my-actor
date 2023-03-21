@@ -5,7 +5,7 @@ import (
 )
 
 func TestNewRingBuffer(t *testing.T) {
-	rb := NewRingBuffer[int](5)
+	rb := NewRingBuffer(5)
 
 	if rb.capacity != 5 {
 		t.Errorf("Expected cap to be 5, but got %d", rb.capacity)
@@ -21,7 +21,7 @@ func TestNewRingBuffer(t *testing.T) {
 }
 
 func TestIsEmpty(t *testing.T) {
-	rb := NewRingBuffer[int](5)
+	rb := NewRingBuffer(5)
 
 	if !rb.IsEmpty() {
 		t.Error("Expected buffer to be empty, but it's not")
@@ -29,7 +29,7 @@ func TestIsEmpty(t *testing.T) {
 }
 
 func TestIsFull(t *testing.T) {
-	rb := NewRingBuffer[int](2)
+	rb := NewRingBuffer(2)
 	rb.Enqueue(1)
 	rb.Enqueue(2)
 
@@ -39,7 +39,7 @@ func TestIsFull(t *testing.T) {
 }
 
 func TestEnqueue(t *testing.T) {
-	rb := NewRingBuffer[int](3)
+	rb := NewRingBuffer(3)
 
 	if !rb.Enqueue(1) {
 		t.Error("Failed to enqueue value 1")
@@ -59,7 +59,7 @@ func TestEnqueue(t *testing.T) {
 }
 
 func TestDequeue(t *testing.T) {
-	rb := NewRingBuffer[int](3)
+	rb := NewRingBuffer(3)
 
 	rb.Enqueue(1)
 	rb.Enqueue(2)
@@ -81,7 +81,7 @@ func TestDequeue(t *testing.T) {
 }
 
 func TestPeek(t *testing.T) {
-	rb := NewRingBuffer[int](3)
+	rb := NewRingBuffer(3)
 
 	rb.Enqueue(1)
 	rb.Enqueue(2)

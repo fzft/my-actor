@@ -7,7 +7,7 @@ import (
 )
 
 func TestQueue(t *testing.T) {
-	q := NewQueue[int](8)
+	q := NewQueue(8)
 
 	go func() {
 		for i := 0; i < 10; i++ {

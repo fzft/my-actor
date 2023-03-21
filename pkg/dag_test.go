@@ -26,22 +26,10 @@ func TestDAG_AddEdge(t *testing.T) {
 	nodeC := dag.AddNode(newTestNode("C"))
 	nodeD := dag.AddNode(newTestNode("D"))
 
-	if err := dag.AddEdge(nodeA, nodeB); err != nil {
-		fmt.Println("Error adding edge:", err)
-	}
-
-	if err := dag.AddEdge(nodeB, nodeC); err != nil {
-		fmt.Println("Error adding edge:", err)
-	}
-
-	if err := dag.AddEdge(nodeC, nodeD); err != nil {
-		fmt.Println("Error adding edge:", err)
-	}
-
-	//// This edge would create a cycle, so it should produce an error.
-	//if err := dag.AddEdge(nodeD, nodeA); err != nil {
-	//	fmt.Println("Error adding edge:", err)
-	//}
+	assert.Nil(t, dag.AddEdge(nodeA, nodeB))
+	assert.Nil(t, dag.AddEdge(nodeB, nodeC))
+	assert.Nil(t, dag.AddEdge(nodeC, nodeD))
+	assert.NotNil(t, dag.AddEdge(nodeD, nodeA))
 
 	dag.PrintWithArrows()
 }
@@ -61,6 +49,39 @@ func TestDAG_StronglyConnectedComponents(t *testing.T) {
 			fmt.Printf("  %s\n", node.Value.String())
 		}
 	}
+}
+
+// TestDAG leaf nodes
+func TestDAG_LeafNodes(t *testing.T) {
+	dag := newTestDag(t)
+	LeafNodes := dag.LeafNodes()
+	assert.Equal(t, 1, len(LeafNodes))
+	assert.Equal(t, "F", LeafNodes[0].Value.String())
+}
+
+// TestDAG non-leaf nodes
+func TestDAG_NonLeafNodes(t *testing.T) {
+	dag := newTestDag(t)
+	nonLeafNodes := dag.GetNonLeafNodes()
+	assert.Equal(t, 6, len(nonLeafNodes))
+	assert.Equal(t, "A", nonLeafNodes[0].Value.String())
+	assert.Equal(t, "B", nonLeafNodes[1].Value.String())
+	assert.Equal(t, "C", nonLeafNodes[2].Value.String())
+	assert.Equal(t, "D", nonLeafNodes[3].Value.String())
+	assert.Equal(t, "E", nonLeafNodes[4].Value.String())
+	assert.Equal(t, "G", nonLeafNodes[5].Value.String())
+}
+
+// TestDAG only one node
+func TestDAG_OnlyOneNode(t *testing.T) {
+	dag := &DAG[Stringer]{}
+	nodeA := dag.AddNode(newTestNode("A"))
+	nonLeafNodes := dag.GetNonLeafNodes()
+	assert.Equal(t, 0, len(nonLeafNodes))
+	leafNodes := dag.LeafNodes()
+	assert.Equal(t, 1, len(leafNodes))
+	assert.Equal(t, "A", leafNodes[0].Value.String())
+	assert.Equal(t, "A", nodeA.Value.String())
 }
 
 func TestDAG_TopologicalSort(t *testing.T) {

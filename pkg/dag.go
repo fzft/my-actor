@@ -210,6 +210,33 @@ func (dag *DAG[Stringer]) TopologicalSort() ([]*Node[Stringer], error) {
 	return stack, nil
 }
 
+func (dag *DAG[Stringer]) LeafNodes() []*Node[Stringer] {
+	leafNodes := make([]*Node[Stringer], 0)
+
+	for _, node := range dag.Nodes {
+		neighbors := dag.Neighbors(node)
+		if len(neighbors) == 0 {
+			leafNodes = append(leafNodes, node)
+		}
+	}
+
+	return leafNodes
+}
+
+// GetNonLeafNodes returns all nodes that are not leaf nodes
+func (dag *DAG[Stringer]) GetNonLeafNodes() []*Node[Stringer] {
+	noLeafNodes := make([]*Node[Stringer], 0)
+
+	for _, node := range dag.Nodes {
+		neighbors := dag.Neighbors(node)
+		if len(neighbors) > 0 {
+			noLeafNodes = append(noLeafNodes, node)
+		}
+	}
+
+	return noLeafNodes
+}
+
 func min(a, b int) int {
 	if a < b {
 		return a

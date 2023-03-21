@@ -4,20 +4,20 @@ import (
 	"sync"
 )
 
-type Queue[T any] struct {
-	items    []T
+type Queue struct {
+	items    []any
 	cond     *sync.Cond
 	capacity int
 }
 
-func NewQueue[T any](cap int) *Queue[T] {
-	return &Queue[T]{
-		items: make([]T, 0, cap),
+func NewQueue(cap int) *Queue {
+	return &Queue{
+		items: make([]any, 0, cap),
 		cond:  sync.NewCond(&sync.Mutex{}),
 	}
 }
 
-func (q *Queue[T]) Enqueue(item T) {
+func (q *Queue) Enqueue(item any) {
 	q.cond.L.Lock()
 	q.items = append(q.items, item)
 	q.cond.L.Unlock()
@@ -25,7 +25,7 @@ func (q *Queue[T]) Enqueue(item T) {
 	q.cond.Signal()
 }
 
-func (q *Queue[T]) Dequeue() T {
+func (q *Queue) Dequeue() any {
 	q.cond.L.Lock()
 	defer q.cond.L.Unlock()
 
