@@ -7,6 +7,8 @@ import (
 )
 
 func TestQueue(t *testing.T) {
+	stopCh := make(chan struct{})
+
 	q := NewQueue(8)
 
 	go func() {
@@ -18,8 +20,7 @@ func TestQueue(t *testing.T) {
 	time.Sleep(2 * time.Second)
 
 	for i := 0; i < 10; i++ {
-		item := q.Dequeue()
+		item := q.Dequeue(stopCh)
 		fmt.Println(item)
 	}
-
 }

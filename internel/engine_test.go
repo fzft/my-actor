@@ -7,6 +7,14 @@ import (
 	"time"
 )
 
+type FooMessage struct {
+	num int
+}
+
+func (f *FooMessage) String() string {
+	return fmt.Sprintf("FooMessage num %d", f.num)
+}
+
 type Dummy struct {
 }
 
@@ -16,6 +24,9 @@ func (d *Dummy) Receive(ctx *Context, msg any) (any, error) {
 		return fmt.Sprintf("dummy:%s", v), nil
 	case int:
 		v = v + 1
+		return v, nil
+	case *FooMessage:
+		v.num += 1
 		return v, nil
 	default:
 		return nil, fmt.Errorf("dummy not support msg type")
@@ -43,6 +54,8 @@ func TestEngine_OneNode(t *testing.T) {
 
 	assert.Nil(t, engine.Ready())
 	assert.Nil(t, engine.Send("hello"))
+	assert.Nil(t, engine.Send(1))
+	assert.Nil(t, engine.Send(&FooMessage{num: 1}))
 
 	time.Sleep(1 * time.Second)
 

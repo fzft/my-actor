@@ -6,12 +6,26 @@ import (
 	"go.uber.org/zap"
 )
 
+// ActorState is the state of the actor
+// state transition:
+// init -> running -> paused -> running -> stopped
+// TODO: use finite state machine to manage the state transition
+type ActorState int
+
+const (
+	ActorStateInit ActorState = iota
+	ActorStateRunning
+	ActorStatePaused
+	ActorStateStopped
+)
+
 const defaultBufferSize = 1024
 
 type Pid struct {
 	logger    *zap.SugaredLogger
 	uuid      string
 	actorName string
+	state     ActorState
 
 	actor   Actor
 	context *Context
@@ -30,8 +44,14 @@ func NewPid(logger *zap.SugaredLogger, actor Actor) *Pid {
 		logger:       logger,
 		TickInMsgCh:  make(chan TickInMsg, defaultBufferSize),
 		TickOutMsgCh: make(chan TickOutMsg, defaultBufferSize),
+		state:        ActorStateInit,
 	}
 	return pid
+}
+
+func (p *Pid) Stop() {
+	p.context.stop()
+	p.state = ActorStateStopped
 }
 
 func (p *Pid) String() string {
@@ -41,9 +61,14 @@ func (p *Pid) String() string {
 	return fmt.Sprintf("pid:%s", p.actorName)
 }
 
+// State returns the actor's state
+func (p *Pid) State() ActorState {
+	return p.state
+}
+
 // run is the actor's main loop
 func (p *Pid) run() {
-
+	p.state = ActorStateRunning
 	go p.context.buffered()
 
 	if d, ok := p.actor.(PreStartHookActor); ok {
@@ -78,6 +103,10 @@ func (p *Pid) run() {
 					d.ErrHandler(p.context, err)
 				}
 			}
+		}
+
+		if p.state == ActorStateStopped {
+			break
 		}
 	}
 

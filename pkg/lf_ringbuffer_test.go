@@ -3,6 +3,7 @@ package pkg
 import (
 	"github.com/stretchr/testify/assert"
 	"testing"
+	"time"
 )
 
 func TestLFRingBufferEnqueueDequeue(t *testing.T) {
@@ -52,6 +53,10 @@ func TestLFRingBufferIsEmpty(t *testing.T) {
 	assert.Equal(t, 1, val1)
 	assert.Equal(t, 2, val2)
 
+	val3, exist := rb.Dequeue()
+	assert.Nil(t, val3)
+	assert.True(t, !exist)
+
 	if !rb.IsEmpty() {
 		t.Error("Ring buffer should be empty")
 	}
@@ -84,13 +89,33 @@ func TestLFRingBufferCapacity(t *testing.T) {
 func TestLFRingBufferConcurrent(t *testing.T) {
 	rb := NewLockFreeRingBuffer(5)
 
-	for {
-		go func() {
-			rb.Enqueue(1)
-		}()
+	stopCh := make(chan struct{})
+	quitCh := make(chan struct{})
 
-		go func() {
+	go func() {
+		time.Sleep(10 * time.Second)
+		<-stopCh
+
+		time.Sleep(3 * time.Second)
+		<-quitCh
+	}()
+
+	go func() {
+		for {
+			flag := rb.Enqueue(1)
+			if !flag {
+				assert.True(t, rb.IsFull())
+				return
+			}
+		}
+	}()
+
+	go func() {
+		for {
 			rb.Dequeue()
-		}()
-	}
+		}
+	}()
+
+	<-quitCh
+
 }

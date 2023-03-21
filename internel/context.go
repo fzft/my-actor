@@ -39,11 +39,20 @@ type Context struct {
 	// pid is the actor's pid
 	pid      string
 	children []*Pid
+
+	stopCh chan struct{}
 }
 
 // NewContext returns a new Context
 func NewContext(logger *zap.SugaredLogger, pid string) *Context {
-	ctx := &Context{pid: pid, store: NewMemoryStore(), inbox: *NewInBox(1024), logger: logger, Suber: make(chan Message)}
+	ctx := &Context{
+		pid:    pid,
+		store:  NewMemoryStore(),
+		inbox:  *NewInBox(1024),
+		logger: logger,
+		Suber:  make(chan Message),
+		stopCh: make(chan struct{}),
+	}
 	go ctx.buffered()
 	return ctx
 }
@@ -62,6 +71,9 @@ func (c *Context) childActors() []*Pid {
 func (c *Context) buffered() {
 	for {
 		select {
+		case <-c.stopCh:
+			c.logger.Debugw("stop buffered", "pid", c.pid)
+			return
 		case msg, ok := <-c.Suber:
 			if ok {
 				c.logger.Debugf("[%s] buffered %+v", c.pid, msg)
@@ -80,12 +92,13 @@ func (c *Context) setMailbox(mailbox Mailbox) {
 func (c *Context) broadcast(msg Message) {
 	for _, child := range c.children {
 		go func(child *Pid) {
-			for {
-				select {
-				case child.context.Suber <- msg:
-					c.logger.Debugf("[%s] broadcast %v -> [%s] ", c.pid, msg, child.context.pid)
-				}
-			}
+			child.context.Suber <- msg
+			c.logger.Debugf("[%s] broadcast %v -> [%s] ", c.pid, msg, child.context.pid)
 		}(child)
 	}
+}
+
+// stop stops the actor's context
+func (c *Context) stop() {
+	close(c.stopCh)
 }
